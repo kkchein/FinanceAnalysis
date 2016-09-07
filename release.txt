@@ -1,0 +1,25 @@
+//-----------------------------------------------------------------------------
+//  Revision History
+//  Project: FinanceAnalysis
+//-----------------------------------------------------------------------------
+//  Version Date        Author
+//      Change
+//-----------------------------------------------------------------------------
+//  00.01   2016/09/07  K.K.Chien
+//      1. create dataCenter.py
+//          This module can get data from internet or file.
+//          It also can use config to get data.
+//          Run the file directly, it will use dataCenter.ini to get internet finance data.
+//      2. create financeData.py
+//          This module has basic finance data class.
+//          These classes can manipulate finance data.
+//      3. create financeMath.py
+//          This module collects finance mathmatical functions.
+//      4. create matPlotDraw.py
+//          This module can use matplot to draw finance data.
+//          financetest.py has example to draw with matPlotDraw.
+//      5. create qtDrawQuote.py
+//          This duole use pyqt to draw finance data.
+//          Run it directly, it create a window to show result.
+//          Drwa config is keep in directory ./ini.
+
