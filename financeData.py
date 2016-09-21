@@ -10,6 +10,7 @@ import csv
 import time
 import os
 import sys
+import unittest
 
 class FinanceDataError(Exception): pass
 class FinanceDataOutOfIndex(FinanceDataError): pass
@@ -69,6 +70,8 @@ class FinancePoint:
         if not isinstance(other, FinancePoint):
             raise FinanceDataError("FinnacePoint > error.")
         return self.value>other.value
+    def __str__ (self):
+        return ("FinancePoint Time: {} Value: {}".format(self.time, self.value))
 
 class FinanceLine():
     """This class finance line.
@@ -263,20 +266,19 @@ class FinanceLine():
                 indextemp.append(icount)
         for icount in reversed(indextemp):
             del self[icount]
-    def findPeakVale (self):
-        """search line peak and vale
+    def findPeak (self):
+        """search line peak
 
-        search line peak and vale
+        search line peak
 
         Args:
             None
 
         Returns:
-            return a FinanceLine which contain peakvale value.
+            return a FinanceLine which contain peak value.
             peakvale value:
                 FinanceLine.peakValeDict["slope"]: not peak or value
                 FinanceLine.peakValeDict["peak"]: peak
-                FinanceLine.peakValeDict["vale"]: vale
 
         Raise:
             None
@@ -290,6 +292,19 @@ class FinanceLine():
             if self[icount-1].value<=self[icount].value>self[icount+1].value:
                 result.add(FinancePoint(self[icount].time, 
                                         FinanceLine.peakValeDict["peak"]))
+            else:
+                result.add(FinancePoint(self[icount].time, 
+                                        FinanceLine.peakValeDict["slope"]))
+        result.add(FinancePoint(self[icount].time, 
+                                FinanceLine.peakValeDict["slope"]))
+        return result
+    def findVale (self):
+        result=FinanceLine()
+        for icount in range(len(self)-1):
+            if icount==0:
+                result.add(FinancePoint(self[icount].time, 
+                                        FinanceLine.peakValeDict["slope"]))
+                continue
             elif self[icount-1].value>=self[icount].value<self[icount+1].value:
                 result.add(FinancePoint(self[icount].time, 
                                         FinanceLine.peakValeDict["vale"]))
@@ -298,6 +313,45 @@ class FinanceLine():
                                         FinanceLine.peakValeDict["slope"]))
         result.add(FinancePoint(self[icount].time, 
                                 FinanceLine.peakValeDict["slope"]))
+        return result
+    def getMaxValueIndex (self, start=0, end=-1):
+        if start>=0:
+            loopstart=start
+        else:
+            loopstart=len(self)+start
+        if end>=0:
+            loopend=end
+        else:
+            loopend=len(self)+end+1
+        if loopstart==loopend:
+            return loopstart
+        result=None
+        for icount in range(loopstart, loopend):
+            if icount<0 or icount>=len(self):
+                continue
+            if result==None or maxValue<self[icount].value:
+                result=icount
+                maxValue=self[icount].value
+        return result
+    def getMinValueIndex (self, start=0, end=-1):
+        if start>=0:
+            loopstart=start
+        else:
+            loopstart=len(self)+start
+        if end>=0:
+            loopend=end
+        else:
+            loopend=len(self)+end+1
+        if loopstart==loopend:
+            return loopstart
+        result=None
+        minValue=0
+        for icount in range(loopstart, loopend):
+            if icount<0 or icount>=len(self):
+                continue
+            if result==None or minValue>self[icount].value:
+                result=icount
+                minValue=self[icount].value
         return result
 
 class FinanceDataSet():
@@ -694,55 +748,45 @@ class FinanceDataSet():
         self.__lowValue.sortTime()
         self.__closeValue.sortTime()
         self.__volumeValue.sortTime()
-
+class financeDataTest(unittest.TestCase):
+    def setUp(self):
+        self.sampleLine=FinanceLine()
+        self.sampleLine.add(FinancePoint(datetime.datetime(2016,5,25,23,13,11,22),10))
+        self.sampleLine.add(FinancePoint(datetime.datetime(2016,5,26),3))
+        self.sampleLine.add(FinancePoint(datetime.datetime(2016,6,26),3))
+        self.sampleLine.add(FinancePoint(datetime.datetime(2016,1,26),7))
+        self.sampleLine.add(FinancePoint(datetime.datetime(2016,8,26),2))
+        self.sampleLine.add(FinancePoint(datetime.datetime(2016,2,26),5.5))
+        self.sampleSet=FinanceDataSet()
+        self.sampleSet.add(datetime.datetime(2015,12,26),9000,9100,8900,9050,100)
+        self.sampleSet.add(datetime.datetime(2015,8,26),8000,8100,7900,8050,33)
+        self.sampleSet.add(datetime.datetime(2015,10,26),7000,7100,6900,7050,44)
+        self.sampleSet.add(datetime.datetime(2015,1,26),6000,6100,5900,6050,55)
+    def test_sampleSort (self):
+        laspoint=self.sampleLine[-1]
+        testline=self.sampleLine[:]
+        testline.add(FinancePoint(datetime.datetime(2010,5,25,23,13,11,22),55))
+        testline.sortTime()
+        self.assertEqual(self.sampleLine[-1], laspoint)
+    def test_addSet (self):
+        oriSet=self.sampleSet[:]
+        testSet=FinanceDataSet()
+        testSet.add(datetime.datetime(2000,12,26),9000,9100,8900,9050,100)
+        testSet.add(datetime.datetime(2000,5,26),9000,9100,8900,9050,100)
+        testSet.add(datetime.datetime(2000,3,26),9000,9100,8900,9050,100)
+        testSet.add(datetime.datetime(2015,10,26),7000,7100,6900,7050,44)
+        testSet.add(datetime.datetime(2015,1,26),6000,6100,5900,6050,55)
+        oriSet.addset(testSet)
+        for icount in range(-1, 0-len(testSet), -1):
+            self.assertTrue(testSet.openValue[icount].time==oriSet.openValue[icount].time 
+                            and testSet.openValue[icount].value==oriSet.openValue[icount].value,
+                            msg='icount:%d testset:%s oriset:%s' %(icount, str(testSet.openValue[icount]), oriSet.openValue[icount]))
+    def test_findMax (self):
+        self.assertTrue(10.0==max(self.sampleLine).value)
+    def test_findMin (self):
+        self.assertTrue(2.0==min(self.sampleLine).value)
+    def test_getIndex (self):
+        self.assertTrue(self.sampleLine.index(datetime.datetime(2016,1,26))==3)
 if __name__=="__main__":
-    ltemp=FinanceLine()
-    ltemp.add(FinancePoint(datetime.datetime(2016,5,25,23,13,11,22),10))
-    ltemp.add(FinancePoint(datetime.datetime(2016,5,26),3))
-    ltemp.add(FinancePoint(datetime.datetime(2016,5,26),3))
-    ltemp.add(FinancePoint(datetime.datetime(2016,1,26),7))
-    ltemp.add(FinancePoint(datetime.datetime(2016,8,26),2))
-    ltemp.add(FinancePoint(datetime.datetime(2016,2,26),5.5))
-    ltemp.sortTime()
-    for ii in range(len(ltemp)):
-        print(ii,":",ltemp[ii].time, ltemp[ii].value)
-    print("len:",len(ltemp))
-    #del ltemp[-1]
-    #print("len_del:",len(ltemp))
-    print("sss:",ltemp[-1].time, ltemp[-1].value)
-    ltemp[-1]=FinancePoint(datetime.datetime(2010,2,26),5.5)
-    print("test:",ltemp[-1].time, ltemp[-1].value)
-    ttt=FinanceDataSet()
-    ttt.add(datetime.datetime(2015,12,26),9000,9100,8900,9050,100)
-    ttt.add(datetime.datetime(2015,8,26),8000,8100,7900,8050,33)
-    ttt.add(datetime.datetime(2015,10,26),7000,7100,6900,7050,44)
-    ttt.add(datetime.datetime(2015,1,26),6000,6100,5900,6050,55)
-    ttt.sortTime()
-    for ii in range(len(ttt)):
-        print(ii,":",ttt.openValue[ii].time,
-            ttt.openValue[ii].value,
-            ttt.highValue[ii].value,
-            ttt.lowValue[ii].value,
-            ttt.closeValue[ii].value,
-            ttt.volumeValue[ii].value)
-    print("set len:",len(ttt))
-    ttt2=FinanceDataSet()
-    ttt2.add(datetime.datetime(2000,12,26),9000,9100,8900,9050,100)
-    ttt2.add(datetime.datetime(2000,5,26),9000,9100,8900,9050,100)
-    ttt2.add(datetime.datetime(2000,3,26),9000,9100,8900,9050,100)
-    ttt2.add(datetime.datetime(2015,10,26),7000,7100,6900,7050,44)
-    ttt2.add(datetime.datetime(2015,1,26),6000,6100,5900,6050,55)
-    ttt.addset(ttt2)
-    for ii in range(len(ttt)):
-        print(ii,":",ttt.openValue[ii].time,
-            ttt.openValue[ii].value,
-            ttt.highValue[ii].value,
-            ttt.lowValue[ii].value,
-            ttt.closeValue[ii].value,
-            ttt.volumeValue[ii].value)
-    #ttt.saveDataToFile("./test.csv")
-    print(max(ttt.closeValue).value)
-    print(min(ttt.closeValue).value)
-    i=ttt.openValue.index(datetime.datetime(2015,10,26))
-    print(i)
+    unittest.main(verbosity=2)
 

@@ -7,6 +7,7 @@
 import datetime
 import math
 import sys
+import unittest
 import financeData
 
 class FinanceMathFunctionError(Exception): pass
@@ -21,7 +22,9 @@ class FinanceMathFunction():
     Attributes:
         None
     """
-    fibo=1.6180339
+    goldRatio=1.6180339
+    cjGRation=0.6180339
+    ration2Sigma=0.04550026
     def __init__ (self):
         self.clear()
     def clear (self):
@@ -186,6 +189,25 @@ class FinanceMathFunction():
         self.tempdic[idstr].add(pointtemp)
         #self.tempdic[idstr].removeRepeatItem()
         self.calWMA(self.tempdic[idstr],outputData,len(self.tempdic[idstr])-1,int(math.sqrt(period)))
+    def calxMACD (self, inputData, inputMA1, inputMA2, outputDiff, position):
+        if not isinstance(inputData, financeData.FinanceLine):
+            raise FinanceMathFunctionError("{0:s} is not a FinanceLine class.".format(str(inputData)))
+        if not isinstance(inputMA1, financeData.FinanceLine):
+            raise FinanceMathFunctionError("{0:s} is not a FinanceLine class.".format(str(inputMA1)))
+        if len(inputMA1)==0:
+            raise FinanceMathFunctionPosBelowPeriod("inputMA1 len is 0.")
+        if not isinstance(inputMA2, financeData.FinanceLine):
+            raise FinanceMathFunctionError("{0:s} is not a FinanceLine class.".format(str(inputMA2)))
+        if len(inputMA2)==0:
+            raise FinanceMathFunctionPosBelowPeriod("inputMA2 len is 0.")
+        if not isinstance(outputDiff, financeData.FinanceLine):
+            raise FinanceMathFunctionError("{0:s} is not a FinanceLine class.".format(str(outputDiff)))
+        if not isinstance(position, int):
+            raise FinanceMathFunctionError("{0:s} is not a FinanceLine class.".format(str(position)))
+        if position>=len(inputData):
+            raise FinanceMathFunctionOutofIndex()
+        pointtemp=financeData.FinancePoint(inputMA1[-1].time, inputMA1[-1].value-inputMA2[-1].value)
+        outputDiff.add(pointtemp)
     def calKKMACD (self, inputData, outputHMA, outputEMA, outputDiff, position, periodHMA, periodEMA):
         """caculate myself moving average convergence divergence
 
@@ -443,41 +465,193 @@ class FinanceMathFunction():
         if position>=0:
             ptemp=position
         else:
-            ptemp=len(closeData)+position
-        if position==0:
+            ptemp=len(closeData)+positio1n
+        if ptemp==0:
             rtemp=math.fabs(highData[ptemp].value-lowData[ptemp].value)
-            self.tempdic[idAtrstr].add(FinancePoint(closeData[ptemp].time, rtemp))
+            self.tempdic[idAtrstr].add(FinancePoint(closeData[ptemp].time, rtemp*multiplier))
         else:
             rtemp=math.fabs(highData[ptemp].value-lowData[ptemp].value)
-            stemp=math.fabs(highData[ptemp].value-closeData[ptemp].value)
+            stemp=math.fabs(highData[ptemp].value-closeData[ptemp-1].value)
             if stemp>rtemp:
                 rtemp=stemp
-            stemp=math.fabs(lowData[ptemp].value-closeData[ptemp].value)
+            stemp=math.fabs(lowData[ptemp].value-closeData[ptemp-1].value)
             if stemp>rtemp:
                 rtemp=stemp
-            self.tempdic[idAtrstr].add(FinancePoint(closeData[ptemp].time, rtemp))
-        self.calHMA(self.tempdic[idAtrstr],outputATR,position,period)
-
-
-if __name__=="__main__":
-    fobj=FinanceMathFunction()
-    line1=financeData.FinanceLine()
-    line1.add(financeData.FinancePoint(datetime.datetime(2016,8,1),1.0))
-    line1.add(financeData.FinancePoint(datetime.datetime(2016,8,2),2.0))
-    line1.add(financeData.FinancePoint(datetime.datetime(2016,8,3),3.0))
-    line1.add(financeData.FinancePoint(datetime.datetime(2016,8,4),4.0))
-    line1.add(financeData.FinancePoint(datetime.datetime(2016,8,5),5.0))
-    line1.add(financeData.FinancePoint(datetime.datetime(2016,8,6),6.0))
-    line1.add(financeData.FinancePoint(datetime.datetime(2016,8,7),7.0))
-    line1.add(financeData.FinancePoint(datetime.datetime(2016,8,8),8.0))
-    resultline=financeData.FinanceLine()
-    for icount in range(len(line1)):
+            self.tempdic[idAtrstr].add(financeData.FinancePoint(closeData[ptemp].time, rtemp*multiplier))
         try:
-            fobj.calHMA(line1,resultline,icount,5)
+            self.calEMA(self.tempdic[idAtrstr],outputATR,ptemp-period+1,period)
         except FinanceMathFunctionPosBelowPeriod:
-            continue
-    for icount in range(len(resultline)):
-        print(icount,resultline[icount].time,resultline[icount].value)
+            pass
+    def getHighLowSignificantPoint (self, inputCheckHigh, inputCheckLow, inputHigh, inputLow, offset=2):
+        maxList=[]
+        minList=[]
+        resultHigh=financeData.FinanceLine()
+        resultLow=financeData.FinanceLine()
+        hlen=len(inputHigh)
+        llen=len(inputLow)
+        if hlen!=llen:
+            raise Exception()
+        for icount in range(-2, 0-hlen, -1):
+            checkrange1=icount-offset
+            checkrange2=icount+1
+            try:
+                if inputCheckHigh[icount-1].value<=inputCheckHigh[icount].value>inputCheckHigh[icount+1].value:
+                    indextemp=inputHigh.getMaxValueIndex(checkrange1, checkrange2)
+                    if indextemp!=None:
+                        if len(maxList)==0:
+                            maxList.append(indextemp)
+                        elif indextemp in maxList:
+                            pass
+                        elif inputHigh[indextemp].value<inputHigh[indextemp-1].value:
+                            pass
+                        elif len(minList)==0 or maxList[-1]<minList[-1]:
+                            if inputHigh[indextemp].value>inputHigh[maxList[-1]].value:
+                                del maxList[-1]
+                                maxList.append(indextemp)
+                        elif maxList[-1]>=minList[-1]:
+                            maxList.append(indextemp)
+            except IndexError:
+                pass
+            try:
+                if inputCheckLow[icount-1].value>=inputCheckLow[icount].value<inputCheckLow[icount+1].value:
+                    indextemp=inputLow.getMinValueIndex(checkrange1, checkrange2)
+                    if indextemp!=None:
+                        if not len(minList):
+                            minList.append(indextemp)
+                        elif indextemp in minList:
+                            pass
+                        elif inputLow[indextemp].value>inputLow[indextemp-1].value:
+                            pass
+                        elif len(maxList)==0 or maxList[-1]>minList[-1]:
+                            if inputLow[indextemp].value<inputLow[minList[-1]].value:
+                                del minList[-1]
+                                minList.append(indextemp)
+                        elif maxList[-1]<=minList[-1]:
+                            minList.append(indextemp)
+            except IndexError:
+                pass
+        for icount in range(len(inputHigh)):
+            if icount in maxList:
+                resultHigh.add(financeData.FinancePoint(inputHigh[icount].time, 
+                                        financeData.FinanceLine.peakValeDict["peak"]))
+            else:
+                resultHigh.add(financeData.FinancePoint(inputHigh[icount].time, 
+                                        financeData.FinanceLine.peakValeDict["slope"]))
+            if icount in minList:
+                resultLow.add(financeData.FinancePoint(inputHigh[icount].time, 
+                                        financeData.FinanceLine.peakValeDict["vale"]))
+            else:
+                resultLow.add(financeData.FinancePoint(inputHigh[icount].time, 
+                                        financeData.FinanceLine.peakValeDict["slope"]))
+        return (resultHigh, resultLow)
+    def calHMABandWeight (self, inputClose, inputHigh, inputLow, highSigPoint, lowSigPoint, period, multiplier):
+        result=0.0
+        wcount=0
+        midtemp=financeData.FinanceLine()
+        hightemp=financeData.FinanceLine()
+        lowtemp=financeData.FinanceLine()
+        for icount in range(len(inputClose)):
+            try:
+                self.calHMABand(inputClose,
+                       inputHigh, 
+                       inputLow,
+                       midtemp, hightemp, lowtemp, 
+                       icount, period, multiplier)
+            except FinanceMathFunctionPosBelowPeriod:
+                        continue
+        for icount in range(-1, -1-len(midtemp), -1):
+            if highSigPoint[icount].value==financeData.FinanceLine.peakValeDict["peak"]:  #high
+                if inputHigh[icount].value<midtemp[icount].value:
+                    continue
+                diff=math.fabs(inputHigh[icount].value-hightemp[icount].value)
+                result+=diff
+                wcount+=1
+            if lowSigPoint[icount].value==financeData.FinanceLine.peakValeDict["vale"]:  #low
+                if inputLow[icount].value>midtemp[icount].value:
+                    continue
+                diff=math.fabs(lowtemp[icount].value-inputLow[icount].value)
+                result+=diff
+                wcount+=1
+        if not wcount:
+            return result
+        return (result/wcount)
+    def calKKMacdWeight (self, inputData, periodHMA, periodEMA, offset=2):
+        result=0.0
+        hamtemp=financeData.FinanceLine()
+        ematemp=financeData.FinanceLine()
+        difftemp=financeData.FinanceLine()
+        for icount in range(len(inputData)):
+            try:
+                self.calKKMACD(inputData, hmatemp, ematemp, difftemp, icount, periodHMA, periodEMA)
+            except FinanceMathFunctionPosBelowPeriod:
+                continue
+        ihDiff=len(inputData)-len(hamtemp)
+        ieDiff=len(inputData)-len(ematemp)
+        idDiff=len(inputData)-len(difftemp)
+        peaktemp=[]
+        valetemp=[]
+        difftemp.peakLine=difftemp.findPeak()
+        difftemp.valeLine=difftemp.findVale()
+        for icount in range(0-len(difftemp), -1):
+            if difftemp.peakLine[icount].value==financeData.FinanceLine.peakValeDict["slope"]:
+                continue
+            elif difftemp.peakLine[icount].value==financeData.FinanceLine.peakValeDict["peak"]:
+                indextemp=inputData.getMaxValueIndex(icount-offset, icount)
+                peaktemp.append([icount, indextemp, inputData[indextemp].value])
+        return result
+    def calRatio (self, closeData, highData, lowData, period, multiplier, matype='hma'):
+        midtemp=financeData.FinanceLine()
+        hightemp=financeData.FinanceLine()
+        lowtemp=financeData.FinanceLine()
+        for icount in range(len(closeData)):
+            try:
+                if matype=='hma':
+                    self.calHMABand(closeData, highData, lowData, midtemp, hightemp, lowtemp, icount, period, multiplier)
+                elif matype=='ema':
+                    self.calEMABand(closeData, highData, lowData, midtemp, hightemp, lowtemp, icount, period, multiplier)
+                else:
+                    raise Exception()
+            except FinanceMathFunctionPosBelowPeriod:
+                pass
+        outCount=[]
+        inCount=[]
+        outBoundCnt=[]
+        for icount in range(-1,0-len(hightemp),-1):
+            if (closeData[icount].value>=midtemp[icount].value
+                and highData[icount].value>=hightemp[icount].value):
+                outCount.append(closeData[icount])
+                if lowData[icount].value>=hightemp[icount].value:
+                    outBoundCnt.append(closeData[icount])
+            elif (closeData[icount].value<midtemp[icount].value
+                and lowData[icount].value<=lowtemp[icount].value):
+                outCount.append(closeData[icount])
+                if highData[icount].value<=hightemp[icount].value:
+                    outBoundCnt.append(closeData[icount])
+            else:
+                inCount.append(closeData[icount])
+        if len(outCount)==0:
+            return (0, 0)
+        return (len(outCount)/(len(inCount)+len(outCount)) ,len(outBoundCnt)/len(outCount))
 
-
-
+class financeMathTest(unittest.TestCase):
+    def setUp (self):
+        self.sampleSet=financeData.FinanceDataSet()
+        self.sampleSet.getDataFromFile('./history/test.csv')
+    def xxtest_Atr (self):
+        fobj=FinanceMathFunction()
+        atrline=financeData.FinanceLine()
+        for icount in range(len(self.sampleSet)):
+            try:
+                fobj.calATR(self.sampleSet.closeValue,self.sampleSet.highValue,self.sampleSet.lowValue,atrline,icount,16, 2.0)
+            except FinanceMathFunctionPosBelowPeriod:
+                continue
+        for item in atrline:
+            print('atr %s %f' %(str(item.time), item.value))
+        self.assertTrue(True)
+    def test_ratio (self):
+        fobj=FinanceMathFunction()
+        print(fobj.calRatio(self.sampleSet.closeValue,self.sampleSet.highValue,self.sampleSet.lowValue,10,1.0))
+        self.assertTrue(True)
+if __name__=="__main__":
+    unittest.main()
+    

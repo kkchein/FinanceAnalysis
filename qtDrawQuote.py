@@ -32,7 +32,7 @@ class DrawItem():
         pen: drawing pen style. QtGui.QPen class
         brush: drawing brush style. QtGui.QBrush class
     """
-    drawtypeDict={"line":1,"peakvale":2}
+    drawtypeDict={"line":1,"peakvale":2,"value":3}
     def __init__ (self, line, name="", drawType="line", 
                   pen=QtGui.QPen(QtGui.QColor(255,255,255),
                                  0, 
@@ -97,7 +97,7 @@ class QtDraw(QtGui.QMainWindow):
     posW=8
     stickW=6
     dotW=6
-    def __init__ (self, parent=None):
+    def __init__ (self, parent=None, inputFile=None):
         #self.candleData=financeData.FinanceDataSet()
         #self.drawItems=[]
         self.clearData()
@@ -108,6 +108,10 @@ class QtDraw(QtGui.QMainWindow):
         self.lastPos=None
         ###
         self.crossTempLine=[]
+        self.drawTempLine=[]
+        self.drawTempPoint=[]
+        self.drawMoveTempLine=[]
+        self.drawItemTemp=[]
         ###
         self.cltKey=False
         self.zoomPos=None
@@ -196,12 +200,38 @@ class QtDraw(QtGui.QMainWindow):
                                             triggered=self.checkBoxDrawLineChanged)
         self.actionDrawLine.setCheckable(True)
         self.ui.toolBar.addAction(self.actionDrawLine)
+        ###Find Significant point toolbar button
+        self.actionSignificantPnt = QtGui.QAction(QtGui.QIcon(),
+                                                  "Sig", 
+                                                  self, 
+                                                  triggered=self.findSigPoingBtnClicked)
+        self.ui.toolBar.addAction(self.actionSignificantPnt)
+        ###Scan Band Arg toolbar button
+        self.actionScanBand = QtGui.QAction(QtGui.QIcon(),
+                                            "Scan Band", 
+                                            self, 
+                                            triggered=self.scanBandBtnClicked)
+        self.ui.toolBar.addAction(self.actionScanBand)
+        ###Scan ratio toolbar button
+        self.actionScanRatio = QtGui.QAction(QtGui.QIcon(),
+                                            "Scan Ratio", 
+                                            self, 
+                                            triggered=self.scanRatioBtnClicked)
+        self.ui.toolBar.addAction(self.actionScanRatio)
+        ###Scan MACD toolbar button
+        self.actionScanMacd = QtGui.QAction(QtGui.QIcon(),
+                                            "Scan MACD", 
+                                            self, 
+                                            triggered=self.scanMacdBtnClicked)
+        self.ui.toolBar.addAction(self.actionScanMacd)
         ###setup status bar
         self.labelCurrent=QtGui.QLabel(self)
         self.labelCurrent.setMinimumWidth(150)
         self.ui.statusbar.addWidget(self.labelCurrent)
         self.labelValue=QtGui.QLabel(self)
         self.ui.statusbar.addWidget(self.labelValue)
+        #
+        self.beginDataFile=inputFile
     def keyPressEvent(self, event):
         if event.key()==0x1000021:
             self.cltKey=True
@@ -226,31 +256,43 @@ class QtDraw(QtGui.QMainWindow):
         """
         if (event.type() == QtCore.QEvent.MouseButtonPress):
             pos = QtCore.QPointF(self.ui.graphicsView.mapToScene(event.pos()))
+            
             if event.button() == QtCore.Qt.LeftButton:
-                ipos=self.scene2pos(pos.x())
-                if ipos<len(self.candleData):
-                    self.toLog("{0:s} Start:{1:.2f}  High:{2:.2f} Low:{3:.2f} "
-                               "End:{4:.2f} Vol:{5:.2f}"
-                               .format(datetime.datetime
-                                       .strftime(
-                                           self.candleData.openValue[ipos].time
-                                           , '%Y%m%d%H%M%S'),
-                                       self.candleData.openValue[ipos].value,
-                                       self.candleData.highValue[ipos].value,
-                                       self.candleData.lowValue[ipos].value,
-                                       self.candleData.closeValue[ipos].value,
-                                       self.candleData.volumeValue[ipos].value)
-                               )
-                iverpos=ipos-len(self.candleData)
-                if iverpos<0:
-                    for item in self.drawItems:
-                        if iverpos+len(item.line)<0:
-                            continue
-                        if (item.drawtype==DrawItem.drawtypeDict["line"] 
-                            or item.drawtype==DrawItem.drawtypeDict["peakvale"]):
-                            self.toLog("{0:s} : {1:f}"
-                                       .format(item.name,
-                                               item.line[iverpos].value))
+                if self.actionCrossLine.isChecked()==True:
+                    ipos=self.scene2pos(pos.x())
+                    if ipos<len(self.candleData):
+                        self.toLog("{0:s} Start:{1:.2f}  High:{2:.2f} Low:{3:.2f} "
+                                   "End:{4:.2f} Vol:{5:.2f}"
+                                   .format(datetime.datetime
+                                           .strftime(
+                                               self.candleData.openValue[ipos].time
+                                               , '%Y%m%d%H%M%S'),
+                                           self.candleData.openValue[ipos].value,
+                                           self.candleData.highValue[ipos].value,
+                                           self.candleData.lowValue[ipos].value,
+                                           self.candleData.closeValue[ipos].value,
+                                           self.candleData.volumeValue[ipos].value)
+                                   )
+                    iverpos=ipos-len(self.candleData)
+                    if iverpos<0:
+                        for item in self.drawItems:
+                            if iverpos+len(item.line)<0:
+                                continue
+                            self.toLog("{0:s} : {1:f}".format(item.name, item.line[iverpos].value))
+                                
+                if self.actionDrawLine.isChecked()==True:
+                    self.drawTempPoint.append(pos)
+                    if len(self.drawMoveTempLine)!=0:
+                        for icount in range(len(self.drawMoveTempLine)):
+                            self.ui.graphicsView.scene().removeItem(self.drawMoveTempLine[icount])
+                        self.drawMoveTempLine=[]
+                    if len(self.drawTempPoint)>=2:
+                        self.drawTempLine.append(self.ui.graphicsView.scene().addLine(self.drawTempPoint[0].x(),
+                                                                                      self.drawTempPoint[0].y(),
+                                                                                      self.drawTempPoint[1].x(),
+                                                                                      self.drawTempPoint[1].y()))
+                        del self.drawTempPoint
+                        self.drawTempPoint=[]
             elif event.button() == QtCore.Qt.RightButton:
                 if self.actionCrossLine.isChecked()==False:
                     self.actionCrossLine.setChecked(True)
@@ -263,10 +305,27 @@ class QtDraw(QtGui.QMainWindow):
         elif (event.type() == QtCore.QEvent.Resize):
             self.resizeFlag=True
         elif (event.type() == QtCore.QEvent.Paint):
-            if self.resizeFlag==True:
+            if self.resizeFlag:
                 self.resizeFlag=False
                 self.getRealViewRect()
                 #self.setView(self.getViewRightPos())
+                if self.beginDataFile:
+                    try:
+                        if not os.path.exists(self.beginDataFile):
+                            self.toLog(self.beginDataFile+" doesn't exist")
+                        else:
+                            if self.beginDataFile.endswith('.ini'):
+                                self.loadFromIni(self.beginDataFile)
+                            elif self.beginDataFile.endswith('.csv'):
+                                self.loadFromCsv(self.beginDataFile)
+                            self.drawCandle()
+                            self.drawFinanceItems()
+                            self.setScene()
+                            self.setView(len(self.candleData)+2)
+                            self.fitBtnClicked()
+                    except:
+                        self.toLog(traceback.format_exc())
+                    self.beginDataFile=None
         elif (event.type() == QtCore.QEvent.MouseMove):
             pos = QtCore.QPointF(self.ui.graphicsView.mapToScene(event.pos()))
             self.labelCurrent.setText("Pos:{0:d} Value:{1:.2f}"
@@ -287,16 +346,16 @@ class QtDraw(QtGui.QMainWindow):
                         elif posoffy>0:
                             self.zoomOutBtnClicked()
                         self.setView(self.getViewRightPos())
-            #if self.actionDrawLine.isChecked()==True:
-            #    if len(self.drawMoveTempLine)!=0:
-            #        for icount in range(len(self.drawMoveTempLine)):
-            #            self.ui.graphicsView.scene().removeItem(self.drawMoveTempLine[icount])
-            #        self.drawMoveTempLine=[]
-            #    if len(self.drawTempPoint)==1:
-            #        self.drawMoveTempLine.append(self.ui.graphicsView.scene().addLine(self.drawTempPoint[0].x(),
-            #                                                                          self.drawTempPoint[0].y(),
-            #                                                                          pos.x(),
-            #                                                                          pos.y()))
+            if self.actionDrawLine.isChecked()==True:
+                if len(self.drawMoveTempLine)!=0:
+                    for icount in range(len(self.drawMoveTempLine)):
+                        self.ui.graphicsView.scene().removeItem(self.drawMoveTempLine[icount])
+                    self.drawMoveTempLine=[]
+                if len(self.drawTempPoint)==1:
+                    self.drawMoveTempLine.append(self.ui.graphicsView.scene().addLine(self.drawTempPoint[0].x(),
+                                                                                      self.drawTempPoint[0].y(),
+                                                                                      pos.x(),
+                                                                                      pos.y()))
         return QtGui.QWidget.eventFilter(self, source, event)
     def getValueBoundary (self, istart, istop=-1):
         """get (max,min) value in boundary
@@ -330,31 +389,40 @@ class QtDraw(QtGui.QMainWindow):
                 vtemp=min(linetemp).value
                 if minvalue==None or minvalue>vtemp:
                     minvalue=vtemp
+        itemcount=1
         for ditem in self.drawItems:
             if ditem.drawtype==DrawItem.drawtypeDict["peakvale"]:
+                itemcount+=1
                 continue
-            item=ditem.line
-            lendif=len(self.candleData)-len(item)
-            starttemp=start-lendif
-            if starttemp<0:
-                starttemp=0
-            if stop<0:
-                stoptemp=stop
+            elif ditem.drawtype==DrawItem.drawtypeDict["value"]:
+                continue
             else:
-                stoptemp=stop-lendif
-                if stoptemp<0:
+                item=ditem.line
+                lendif=len(self.candleData)-len(item)
+                starttemp=start-lendif
+                if starttemp<0:
+                    starttemp=0
+                if stop<0:
+                    stoptemp=stop
+                else:
+                    stoptemp=stop-lendif
+                    if stoptemp<0:
+                        continue
+                linetemp=item[starttemp:stoptemp]
+                #linetemp=item[start:stop]
+                if len(linetemp)==0:
                     continue
-            linetemp=item[starttemp:stoptemp]
-            #linetemp=item[start:stop]
-            if len(linetemp)==0:
-                continue
-            vtemp=max(linetemp).value
-            if maxvalue==None or maxvalue<vtemp:
-                maxvalue=vtemp
-            vtemp=min(linetemp).value
-            if minvalue==None or minvalue>vtemp:
-                minvalue=vtemp
-        return (maxvalue, minvalue)
+                vtemp=max(linetemp).value
+                if maxvalue==None or maxvalue<vtemp:
+                    maxvalue=vtemp
+                vtemp=min(linetemp).value
+                if minvalue==None or minvalue>vtemp:
+                    minvalue=vtemp
+        #wtemp=QtDraw.dotW
+        #self.scaleYRation=10
+        #htemp=abs(self.value2Scene(wtemp*self.scaleYRation))*itemcount*self.unit
+        htemp=abs(maxvalue-minvalue)*0.01*itemcount
+        return (maxvalue+htemp, minvalue-htemp)
             
     def toLog (self, istr):
         self.ui.textBrowser.append(str(istr))
@@ -497,19 +565,25 @@ class QtDraw(QtGui.QMainWindow):
             self.crossTempLine=[]
     def loadBtnClicked (self):
         fileName = QtGui.QFileDialog.getOpenFileName(self, "Open File", 
-                                                     '.', "ini (*.ini)")
+                                                     '.', "ini (*.ini);;csv (*.csv)")
         if os.path.exists(fileName)==False:
             self.toLog(fileName+" doesn't exist")
             return
         try:
-            self.setWindowTitle(os.path.basename(fileName))
-            self.clearData()
-            self.clearScene()
-            self.loadFromIni(fileName)
+            if fileName.endswith('.ini'):
+                self.clearData()
+                self.clearScene()
+                self.loadFromIni(fileName)
+            elif fileName.endswith('.csv'):
+                self.clearData()
+                self.clearScene()
+                self.loadFromCsv(fileName)
+            else:
+                return
             self.drawCandle()
             self.drawFinanceItems()
             self.setScene()
-            self.setView()
+            self.setView(len(self.candleData)+2)
             self.fitBtnClicked()
         except Exception as e:
             self.toLog(traceback.format_exc())
@@ -531,6 +605,12 @@ class QtDraw(QtGui.QMainWindow):
         colorValue=istr.split(',')
         return QtGui.QColor(int(colorValue[0]),int(colorValue[1]), 
                             int(colorValue[2]))
+    def loadFromCsv(self, fileName):
+        if not isinstance(fileName,str):
+            raise QtDrawError("{0:s} is not a string.".format(str(fileName)))
+        self.candleData.getDataFromFile(fileName)
+        self.unit=0.01
+        self.toLog(str(self.candleData))
     def loadFromIni (self, fileName):
         """load data and config from ini file
 
@@ -607,7 +687,7 @@ class QtDraw(QtGui.QMainWindow):
             try:
                 multiplier1=float(config[sectionname]["multiplier"])
             except:
-                multiplier1=financeMath.FinanceMathFunction.fibo*3
+                multiplier1=financeMath.FinanceMathFunction.goldRatio*3
             ###
             if (indicator=="ma" or indicator=="wma" or indicator=="ema" or 
                 indicator=="hma"):
@@ -645,6 +725,7 @@ class QtDraw(QtGui.QMainWindow):
                 hmaline=financeData.FinanceLine()
                 emaline=financeData.FinanceLine()
                 diffline=financeData.FinanceLine()
+                macdline=financeData.FinanceLine()
                 for icount in range(len(self.candleData.closeValue)):
                     try:
                         fobj.calKKMACD(self.candleData.closeValue, hmaline, 
@@ -652,8 +733,14 @@ class QtDraw(QtGui.QMainWindow):
                                        period2)
                     except financeMath.FinanceMathFunctionPosBelowPeriod:
                         continue
-                diffline.peakvaleLine=diffline.findPeakVale()
-                self.drawItems.append(DrawItem(diffline,
+                for icount in range(len(diffline)):
+                    try:
+                        fobj.calHMA(diffline, macdline, icount, int(period2*financeMath.FinanceMathFunction.cjGRation))
+                    except financeMath.FinanceMathFunctionPosBelowPeriod:
+                        continue
+                macdline.peakLine=diffline.findPeak()
+                macdline.valeLine=diffline.findVale()
+                self.drawItems.append(DrawItem(macdline,
                                                name=sectionname[10:-1],
                                                drawType="peakvale",
                                                brush=QtGui.QBrush(brush1color)
@@ -707,38 +794,69 @@ class QtDraw(QtGui.QMainWindow):
                                                               QtCore.Qt.RoundJoin)
                                                )
                                       )
+            elif indicator=="atr":
+                fobj=financeMath.FinanceMathFunction()
+                atrtemp=financeData.FinanceLine()
+                for icount in range(len(self.candleData.closeValue)):
+                    try:
+                        fobj.calATR(self.candleData.closeValue,self.candleData.highValue,self.candleData.lowValue,atrtemp,icount,period1, multiplier1)
+                    except financeMath.FinanceMathFunctionPosBelowPeriod:
+                        continue
+                self.drawItems.append(DrawItem(atrtemp,
+                                               name=sectionname[10:-1],
+                                               drawType="value"
+                                               )
+                                      )
+            self.setWindowTitle(os.path.basename(fileName))
+    def getCurrentValueBoundary (self):
+        posr=self.getViewRightPos()
+        realBarNum=self.realViewRect.width()/QtDraw.posW
+        posl=posr-realBarNum
+        if posl<0:
+            posl=0
+        if posl>posr:
+            posl=posr
+        return self.getValueBoundary(posl, posr)
     def drawFinanceItems (self):
         fulllen=len(self.candleData)
+        wtemp=QtDraw.dotW
+        btemp=self.getCurrentValueBoundary()
+        #self.toLog('b %f %f' %(btemp[0], btemp[1]))
+        boffset=(btemp[0]-btemp[1])
+        if boffset>10:
+            self.scaleYRation=boffset/300
+        else:
+            self.scaleYRation=boffset/400
+        self.toLog('b:%f %f' %(btemp[0],btemp[1]))
+        htemp=abs(self.value2Scene(wtemp*self.scaleYRation))
+        otemp=abs(self.value2Scene(wtemp/2*self.scaleYRation))
         for item in self.drawItems:
             if item.drawtype==DrawItem.drawtypeDict["line"]:
                 for icount in range(len(item.line)-1):
                     #self.toLog("{0:d} {1:f}".format(icount,item.line[-1-icount].value))
-                    (self.ui.graphicsView.scene()
-                        .addLine(self.pos2Scene(fulllen-1-icount),
-                                 self.value2Scene(item.line[-1-icount].value),
-                                 self.pos2Scene(fulllen-2-icount),
-                                 self.value2Scene(item.line[-2-icount].value),
-                                 pen=item.pen))
+                    self.drawItemTemp.append(self.ui.graphicsView.scene()
+                                             .addLine(self.pos2Scene(fulllen-1-icount),
+                                             self.value2Scene(item.line[-1-icount].value),
+                                             self.pos2Scene(fulllen-2-icount),
+                                             self.value2Scene(item.line[-2-icount].value),
+                                             pen=item.pen))
             elif item.drawtype==DrawItem.drawtypeDict["peakvale"]:
-                if "peakvaleLine" not in item.line.__dict__.keys():
+                if "peakLine" not in item.line.__dict__.keys():
                     continue
-                #if "dtypeDiffTemp" in self.__dict__.keys():
-                    #for item in self.dtypeDiffTemp:
+                if "valeLine" not in item.line.__dict__.keys():
+                    continue
+                #if "drawItemTemp" in self.__dict__.keys():
+                    #for item in self.drawItemTemp:
                     #    self.ui.graphicsView.scene().removeItem(item)
-                self.dtypeDiffTemp=[]
-                wtemp=QtDraw.dotW
-                self.scaleYRation=4
-                htemp=abs(self.value2Scene(wtemp*self.scaleYRation))
-                otemp=abs(self.value2Scene(wtemp/2*self.scaleYRation))
-                for revcount in range(-1, 1-len(item.line.peakvaleLine), -1):
+                for revcount in range(-1, 1-len(item.line.peakLine), -1):
                     ihigh=self.candleData[revcount].highValue[0].value
                     ilow=self.candleData[revcount].lowValue[0].value
-                    if (item.line.peakvaleLine[revcount].value==financeData
+                    if (item.line.peakLine[revcount].value==financeData
                         .FinanceLine.peakValeDict["slope"]):
                         continue
-                    elif (item.line.peakvaleLine[revcount].value==financeData
+                    if (item.line.peakLine[revcount].value==financeData
                         .FinanceLine.peakValeDict["peak"]):
-                        (self.dtypeDiffTemp
+                        (self.drawItemTemp
                             .append(self.ui.graphicsView.scene()
                                     .addEllipse(self.pos2Scene(revcount)-wtemp/2,
                                                 self.value2Scene(ihigh)-htemp-otemp,
@@ -746,12 +864,17 @@ class QtDraw(QtGui.QMainWindow):
                                                 htemp,
                                                 brush=QtGui.QBrush(QtGui
                                                                    .QColor(255,0,0)))))
-                    elif (item.line.peakvaleLine[revcount].value==financeData
+                for revcount in range(-1, 1-len(item.line.valeLine), -1):
+                    ihigh=self.candleData[revcount].highValue[0].value
+                    ilow=self.candleData[revcount].lowValue[0].value
+                    if (item.line.valeLine[revcount].value==financeData
+                        .FinanceLine.peakValeDict["slope"]):
+                        continue
+                    if (item.line.valeLine[revcount].value==financeData
                         .FinanceLine.peakValeDict["vale"]):
-                        (self.dtypeDiffTemp
+                        (self.drawItemTemp
                             .append(self.ui.graphicsView.scene()
-                                    .addEllipse(self.pos2Scene(revcount)
-                                                -wtemp/2,
+                                    .addEllipse(self.pos2Scene(revcount)-wtemp/2,
                                                 self.value2Scene(ilow)+otemp,
                                                 wtemp,
                                                 htemp,
@@ -844,21 +967,159 @@ class QtDraw(QtGui.QMainWindow):
         else:
             self.ui.graphicsView.setDragMode(QtGui.QGraphicsView.NoDrag)
     def checkBoxDrawLineChanged (self):
-        pass
-        #if self.actionDrawLine.isChecked()==False:
-        #    self.drawTempPoint=[]
-        #    if len(self.drawTempLine)!=0:
-        #        for icount in range(len(self.drawTempLine)):
-        #            self.ui.graphicsView.scene().removeItem(self.drawTempLine[icount])
-        #        self.drawTempLine=[]
-        #    if len(self.drawMoveTempLine)!=0:
-        #        for icount in range(len(self.drawMoveTempLine)):
-        #            self.ui.graphicsView.scene().removeItem(self.drawMoveTempLine[icount])
-        #        self.drawMoveTempLine=[]
+        try:
+            if self.actionDrawLine.isChecked()==False:
+                self.drawTempPoint=[]
+                if len(self.drawTempLine)!=0:
+                    for icount in range(len(self.drawTempLine)):
+                        self.ui.graphicsView.scene().removeItem(self.drawTempLine[icount])
+                    self.drawTempLine=[]
+                if len(self.drawMoveTempLine)!=0:
+                    for icount in range(len(self.drawMoveTempLine)):
+                        self.ui.graphicsView.scene().removeItem(self.drawMoveTempLine[icount])
+                    self.drawMoveTempLine=[]
+        except Exception as e:
+            self.toLog(traceback.format_exc())
+    def findSigPoingBtnClicked (self):
+        try:
+            inputPeriod, ok = QtGui.QInputDialog.getInt(self, 'Input period', 'Enter HMA period (must be integer):', value=16)
+            if not ok:
+                return
+            mobj=financeMath.FinanceMathFunction()
+            hmalineHi=financeData.FinanceLine()
+            hmalineLo=financeData.FinanceLine()
+            hmaline=financeData.FinanceLine()
+            for icount in range(len(self.candleData.closeValue)):
+                try:
+                    mobj.calHMA(self.candleData.highValue, hmalineHi, icount, inputPeriod)
+                except financeMath.FinanceMathFunctionPosBelowPeriod:
+                    pass
+                try:
+                    mobj.calHMA(self.candleData.lowValue, hmalineLo, icount, inputPeriod)
+                except financeMath.FinanceMathFunctionPosBelowPeriod:
+                    pass
+                try:
+                    mobj.calHMA(self.candleData.closeValue, hmaline, icount, inputPeriod)
+                except financeMath.FinanceMathFunctionPosBelowPeriod:
+                    pass
+            peakL, valeL=mobj.getHighLowSignificantPoint(hmalineHi, hmalineLo, self.candleData.highValue, self.candleData.lowValue, int(inputPeriod*financeMath.FinanceMathFunction.cjGRation))
+            hmaline.peakLine=peakL
+            hmaline.valeLine=valeL
+            for item in self.drawItemTemp:
+                self.ui.graphicsView.scene().removeItem(item)
+            self.drawItemTemp=[]
+            self.drawItems=[]
+            self.drawItems.append(DrawItem(hmalineHi,
+                                          name="HMA%d_hi" %inputPeriod,
+                                          drawType="line",
+                                          pen=QtGui.QPen(QtGui.QColor(255,0,0),
+                                                           0, 
+                                                           QtCore.Qt.SolidLine, 
+                                                           QtCore.Qt.RoundCap, 
+                                                           QtCore.Qt.RoundJoin)
+                                           )
+                                  )
+            self.drawItems.append(DrawItem(hmalineLo,
+                                          name="HMA%d_lo" %inputPeriod,
+                                          drawType="line",
+                                          pen=QtGui.QPen(QtGui.QColor(100,100,0),
+                                                           0, 
+                                                           QtCore.Qt.SolidLine, 
+                                                           QtCore.Qt.RoundCap, 
+                                                           QtCore.Qt.RoundJoin)
+                                           )
+                                  )
+            self.drawItems.append(DrawItem(hmaline,
+                                          name="HMA%d_PV" %inputPeriod,
+                                          drawType="peakvale",
+                                          brush=QtGui.QBrush(QtGui.QColor(255,0,0))
+                                          )
+                                  )
+            self.drawFinanceItems()
+        except:
+            self.toLog(traceback.format_exc())
+    def scanBandBtnClicked (self):
+        try:
+            if QtGui.QMessageBox.warning(None, "Scan band arg.","This will take a lost of time. Are you sure?", QtGui.QMessageBox.Ok | QtGui.QMessageBox.Cancel) != QtGui.QMessageBox.Ok:
+                return
+            #hmaPeriod, ok = QtGui.QInputDialog.getInt(self, 'Input period', 'Enter HMA period (must be integer):', value=16)
+            #if not ok:
+            #    return
+            self.toLog('Band Scan')
+            goldRatio=financeMath.FinanceMathFunction.goldRatio
+            cgRation=financeMath.FinanceMathFunction.cjGRation
+            finalValue=[]
+            lastperiod=None
+            for icount in range(5, 100):
+                periodtemp=int(icount*goldRatio)
+                if lastperiod==None:
+                    lasperiod=periodtemp
+                elif lasperiod==periodtemp:
+                    lasperiod=periodtemp
+                    continue
+                hmaPeriod=int(cgRation*periodtemp)
+                for jcount in range(2, 41):
+                    multemp=jcount*cgRation
+                    mobj=financeMath.FinanceMathFunction()
+                    hmalineHi=financeData.FinanceLine()
+                    hmalineLo=financeData.FinanceLine()
+                    for kcount in range(len(self.candleData.closeValue)):
+                        try:
+                            mobj.calHMA(self.candleData.highValue, hmalineHi, kcount, hmaPeriod)
+                        except financeMath.FinanceMathFunctionPosBelowPeriod:
+                            pass
+                        try:
+                            mobj.calHMA(self.candleData.lowValue, hmalineLo, kcount, hmaPeriod)
+                        except financeMath.FinanceMathFunctionPosBelowPeriod:
+                            pass
+                    pLine, vLine=mobj.getHighLowSignificantPoint(hmalineHi, hmalineLo, self.candleData.highValue, self.candleData.lowValue, int(hmaPeriod*financeMath.FinanceMathFunction.cjGRation))
+            
+                    wtemp=mobj.calHMABandWeight(self.candleData.closeValue, self.candleData.highValue, 
+                                  self.candleData.lowValue, pLine, vLine, periodtemp, multemp)
+                    #self.toLog('Period:%d Mul:%f WValue:%f' % (periodtemp, multemp, wtemp))
+                    #if len(finalValue)==0 or wtemp<finalValue[-1][0]:
+                    #    finalValue.append([wtemp, periodtemp, multemp])
+                    finalValue.append([wtemp, periodtemp, multemp])
+            finalValue.sort(key=lambda t: t[0])
+            for item in finalValue:
+                self.toLog('Final Period:%d Mul:%f WValue:%f' % (item[1], item[2], item[0]))
+        except Exception as e:
+            self.toLog(traceback.format_exc())
+    def scanRatioBtnClicked (self):
+        try:
+            malist=[]
+            malist.append('hma')
+            malist.append('ema')
+            matemp, ok=QtGui.QInputDialog.getItem(self, 'MA Type', 'Select a ma type:', ['hma','ema'], editable=False)
+            if not ok:
+                return
+            self.toLog('Ration scan. %s' %matemp)
+            goldRatio=financeMath.FinanceMathFunction.goldRatio
+            cgRation=financeMath.FinanceMathFunction.cjGRation
+            result=[]
+            for icount in range(10, 120):
+                periodtemp=int(icount*goldRatio)
+                for jcount in range(1, 21):
+                    multemp=jcount*cgRation
+                    mobj=financeMath.FinanceMathFunction()
+                    rtemp, otemp=mobj.calRatio(self.candleData.closeValue,self.candleData.highValue,self.candleData.lowValue, periodtemp,multemp,matype=matemp)
+                    result.append((periodtemp, multemp, rtemp, otemp))
+            result.sort(key=lambda t: t[2])
+            for item in result:
+                self.toLog('%f %f %f' %(item[0], item[1], item[2]))
 
+        except Exception:
+            self.toLog(traceback.format_exc())
+    def scanMacdBtnClicked (self):
+        try:
+            if QtGui.QMessageBox.warning(None, "Scan MACD arg.","This will take a lost of time. Are you sure?", QtGui.QMessageBox.Ok | QtGui.QMessageBox.Cancel) != QtGui.QMessageBox.Ok:
+                return
+            self.toLog('Scanning...')
+        except Exception as e:
+            self.toLog(traceback.format_exc())
 if __name__=='__main__':
     app=QtGui.QApplication(sys.argv)
-    window=QtDraw()
+    window=QtDraw(inputFile="./ini/test.ini")
     window.show()
     app.exec_()
 

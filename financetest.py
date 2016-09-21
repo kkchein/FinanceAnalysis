@@ -33,7 +33,7 @@ if __name__=="__main__":
     #resultline=fd.FinanceLine()
     #for icount in range(len(line1)):
     #    try:
-    #        fobj.calMA(line1,resultline,icount,int(90*fm.FinanceMathFunction.fibo))
+    #        fobj.calMA(line1,resultline,icount,int(90*fm.FinanceMathFunction.goldRatio))
     #    except fm.FinanceMathFunctionPosBelowPeriod:
     #        continue
     #plotObj.addLine(resultline)
@@ -42,7 +42,7 @@ if __name__=="__main__":
     #resultline=fd.FinanceLine()
     #for icount in range(len(line1)):
     #    try:
-    #        fobj.calWMA(line1,resultline,icount,int(90*fm.FinanceMathFunction.fibo))
+    #        fobj.calWMA(line1,resultline,icount,int(90*fm.FinanceMathFunction.goldRatio))
     #    except fm.FinanceMathFunctionPosBelowPeriod:
     #        continue
     #plotObj.addLine(resultline)
@@ -51,7 +51,7 @@ if __name__=="__main__":
     #resultline=fd.FinanceLine()
     #for icount in range(len(line1)):
     #    try:
-    #        fobj.calEMA(line1,resultline,icount,int(90*fm.FinanceMathFunction.fibo))
+    #        fobj.calEMA(line1,resultline,icount,int(90*fm.FinanceMathFunction.goldRatio))
     #    except fm.FinanceMathFunctionPosBelowPeriod:
     #        continue
     #plotObj.addLine(resultline)
@@ -60,7 +60,7 @@ if __name__=="__main__":
     #resultline=fd.FinanceLine()
     #for icount in range(len(line1)):
     #    try:
-    #        fobj.calHMA(line1,resultline,icount,int(30*fm.FinanceMathFunction.fibo))
+    #        fobj.calHMA(line1,resultline,icount,int(30*fm.FinanceMathFunction.goldRatio))
     #    except fm.FinanceMathFunctionPosBelowPeriod:
     #        continue
     #plotObj.addLine(resultline)
@@ -71,7 +71,7 @@ if __name__=="__main__":
     #diftemp=fd.FinanceLine()
     #for icount in range(len(line1)):
     #    try:
-    #        fobj.calKKMACD(line1,hmatemp,ematemp,diftemp,icount,int(12*fm.FinanceMathFunction.fibo),int(8*fm.FinanceMathFunction.fibo))
+    #        fobj.calKKMACD(line1,hmatemp,ematemp,diftemp,icount,int(12*fm.FinanceMathFunction.goldRatio),int(8*fm.FinanceMathFunction.goldRatio))
     #    except fm.FinanceMathFunctionPosBelowPeriod:
     #        continue
     #plotObj.addLine(hmatemp)
@@ -86,7 +86,7 @@ if __name__=="__main__":
     for icount in range(len(line1)):
         try:
             fobj.calHMABand(line1,line2,line3,midline,hiline,loline,icount,
-                            int(30*fm.FinanceMathFunction.fibo),fm.FinanceMathFunction.fibo*3)
+                            int(30*fm.FinanceMathFunction.goldRatio),fm.FinanceMathFunction.goldRatio*3)
         except fm.FinanceMathFunctionPosBelowPeriod:
             continue
     plotObj.addLine(midline)
@@ -100,7 +100,7 @@ if __name__=="__main__":
     for icount in range(len(line1)):
         try:
             fobj.calHMABand(line1,line2,line3,midline,hiline,loline,icount,
-                            int(90*fm.FinanceMathFunction.fibo),fm.FinanceMathFunction.fibo*10)
+                            int(90*fm.FinanceMathFunction.goldRatio),fm.FinanceMathFunction.goldRatio*10)
         except fm.FinanceMathFunctionPosBelowPeriod:
             continue
     plotObj.addLine(midline)

@@ -76,10 +76,8 @@ class MPLTDraw:
 if __name__=="__main__":
     plotObj=MPLTDraw()
     ttt=financeData.FinanceDataSet()
-    ttt.getDataFromFile("./history/Index_TaiwanWI_google_1_day.csv")
-    print(str(ttt[1]))
-    ttt2=ttt[:]
-    plotObj.addLine(ttt2.closeValue)
+    ttt.getDataFromFile("./history/ETF_SchwabGold_google_1_day.csv")
+    plotObj.addLine(ttt.closeValue)
     plotObj.show()
     
 

@@ -71,8 +71,11 @@
     </Config>
     <Files AutoFolders="DirectoryView">
         <Folder Name="ini">
+            <F N="ini/ETF_SchwabGold.ini"/>
             <F N="ini/example.ini"/>
+            <F N="ini/japanNikkei.ini"/>
             <F N="ini/taiwanWI.ini"/>
+            <F N="ini/test.ini"/>
         </Folder>
         <F N="dataCenter.ini"/>
         <F N="dataCenter.py"/>
@@ -81,6 +84,7 @@
         <F N="financetest.py"/>
         <F N="matPlotDraw.py"/>
         <F N="qtDrawQuote.py"/>
+        <F N="qtMainWindow.py"/>
         <F N="qttest.py"/>
         <F N="release.txt"/>
         <F N="tktest.py"/>

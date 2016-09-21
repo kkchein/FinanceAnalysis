@@ -383,6 +383,7 @@ class DataCenter():
                     pass
                 tempset.add(dt,openValue,highValue,lowValue,closeValue,volValue)
             result=tempset
+            result.sortTime()
             return result
     def __getHistoryDataFromGoogle (self, setting, startTime=datetime.datetime(1976,1,1)):
         """get financedata from Google finance
@@ -416,6 +417,7 @@ class DataCenter():
                        % (setting.symbol,
                            datetime.datetime.strftime(startTime, "%m/%d/%Y"),
                            displayNum))
+            #print(urlstr)
             content = opener.open(urlstr).read()
             totalSizeStr=r'google\.finance\.applyPagination\(\s+\d+,\s+\d+,\s+(\d+),\s+'
             reg_row_size =  re.compile( totalSizeStr )
@@ -465,6 +467,7 @@ class DataCenter():
                         result.add(dt,openValue,highValue,lowValue,closeValue,volValue)
                     except financeData.FinanceDataError as e:
                         print(str(e))
+            result.sortTime()
             return result
         else:
             raise DataCenterConfigError("data from {0:s} doesn't support {1:s}".format(setting.dataSource, setting.timeType))
