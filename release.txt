@@ -5,11 +5,44 @@
 //  Version Date        Author
 //      Change
 //-----------------------------------------------------------------------------
+//  00.02   2016/09/21  K.K.Chien
+//      dataCenter.py
+//      1. __getHistoryDataFromYahoo and __getHistoryDataFromGoogle will
+//          sort data before return
+//      financeData.py
+//      2. add __str__ to class FinancePoint
+//      3. split FinanceLine.findPeakVale to FinanceLine.findPeak and FinanceLine.findVale
+//      4. add FinanceLine.getMaxValueIndex and FinanceLine.getMinValueIndex
+//      5. add uniitest into financeData.py
+//      financeMath.py
+//      6. remove FinanceMathFunction class attribute fibo, add class attribute
+//          goldRatio, cjGRation, and ration2Sigma
+//      7. add FinanceMathFunction.calxMACD
+//      8. correct FinanceMathFunction.calATR position bug
+//      9. add FinanceMathFunction.getHighLowSignificantPoint, calHMABandWeight
+//          , calKKMacdWeight, and calRatio
+//      10. add unittest into financeMath.py
+//      qtMainWindows.py
+//      11. create qtMainWindows.py
+//          This module invoke a windows program.
+//          This program can load ini or csv file and call qtDrawQuote
+//      qtDrawQuote.py
+//      12. modify DrawItem.drawtypeDict value
+//      13. add inputFile arg to QtDraw.__init__()
+//      14. add toolbar button scanband, sig, scanratio, scanmacd
+//      15. modify left mouse button behavior
+//      16. check init load file in paint event
+//      17. add draw line function
+//      18. correct dot type drawitem bug
+//      19. add load csv file function
+//      20. add atr title in ini file
+//      21. add QtDraw.getCurrentValueBoundary
 //  00.01   2016/09/07  K.K.Chien
 //      1. create dataCenter.py
 //          This module can get data from internet or file.
 //          It also can use config to get data.
-//          Run the file directly, it will use dataCenter.ini to get internet finance data.
+//          Run the file directly, it will use dataCenter.ini to get internet 
+//          finance data.
 //      2. create financeData.py
 //          This module has basic finance data class.
 //          These classes can manipulate finance data.
